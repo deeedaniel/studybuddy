@@ -33,6 +33,7 @@ export default function App() {
           body: JSON.stringify({
             apiKey: apiKey.trim(),
             phoneNumber: phoneNumber.trim(),
+            userName: user?.name,
           }),
         }
       );
@@ -41,9 +42,10 @@ export default function App() {
       console.log("Response from backend:", data);
 
       if (response.ok && data.success) {
-        alert(
-          `Success! Assignment reminder sent to ${phoneNumber}. Found ${data.data.assignmentsFound} upcoming assignments.`
-        );
+        // alert(
+        //   `Success! Assignment reminder sent to ${phoneNumber}. Found ${data.data.assignmentsFound} upcoming assignments.`
+        // );
+        console.log("Success! Signed up for friendly reminders!");
       } else {
         alert(`Error: ${data.message || "Failed to send assignment reminder"}`);
       }
@@ -123,7 +125,7 @@ export default function App() {
               onClick={handleSubmit}
               disabled={isLoading}
             >
-              {isLoading ? "Sending Reminder..." : "Send Assignment Reminder"}
+              {isLoading ? "Signing Up..." : "Sign Up For Friendly Reminders!"}
             </button>
           </div>
         ) : (

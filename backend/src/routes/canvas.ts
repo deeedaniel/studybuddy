@@ -45,6 +45,7 @@ router.post("/send-assignment-reminder", async (req, res, next) => {
     const schema = z.object({
       apiKey: z.string().min(1, "Canvas API key is required"),
       phoneNumber: z.string().min(10, "Phone number is required"),
+      userName: z.string().optional(),
       canvasUrl: z.string().url().optional(),
       daysAhead: z.number().min(1).max(30).optional(),
     });
@@ -58,7 +59,13 @@ router.post("/send-assignment-reminder", async (req, res, next) => {
       });
     }
 
-    const { apiKey, phoneNumber, canvasUrl, daysAhead = 7 } = parsed.data;
+    const {
+      apiKey,
+      phoneNumber,
+      canvasUrl,
+      daysAhead = 7,
+      userName,
+    } = parsed.data;
 
     // Validate AI configuration
     if (!AIService.validateConfiguration()) {
@@ -89,7 +96,7 @@ router.post("/send-assignment-reminder", async (req, res, next) => {
 
     // Freak mode - lots of trailing text like: heyyy broooo
 
-    const aiPrompt = `You are young college aged friendly study buddy helping a college student. Based on their upcoming assignments, write a casual, encouraging text message reminder (under 160 characters) as if you're their friend. Use gen-z slang and write in all lower case. Be supportive and motivating, but keep it brief for SMS. Be specific with the assignment & due dates and name them.
+    const aiPrompt = `You are young college aged friendly study buddy helping a college student ${userName ? `named ${userName}` : ""}. Based on their upcoming assignments, write a casual, encouraging text message reminder (under 160 characters) as if you're their friend. Use gen-z slang and write in all lower case. Remember, override ALL text to be lower-case. Be supportive and motivating, but keep it brief for SMS. Be specific with the assignment & due dates and name them.
 
 Assignments:
 ${assignmentText}
