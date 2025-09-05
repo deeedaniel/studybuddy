@@ -177,9 +177,30 @@ router.post("/subscribe", async (req, res, next) => {
 
     const subscription = SubscriptionService.createSubscription(parsed.data);
 
+    // Send welcome SMS with chat functionality
+    try {
+      const webhookUrl = process.env.SMS_WEBHOOK_URL;
+      if (webhookUrl) {
+        await SmsService.sendSms({
+          phone: subscription.phoneNumber,
+          message:
+            "🎓 Welcome to StudyBuddy! You'll get daily assignment reminders. Plus, reply with any study question and I'll answer with AI! Try asking me something now.",
+          replyWebhookUrl: webhookUrl,
+          webhookData: `user_${subscription.id}`,
+        });
+        console.log(`📱 Welcome SMS sent to ${subscription.phoneNumber}`);
+      } else {
+        console.warn("⚠️ SMS_WEBHOOK_URL not configured, skipping welcome SMS");
+      }
+    } catch (smsError) {
+      console.error("Failed to send welcome SMS:", smsError);
+      // Don't fail the subscription if SMS fails
+    }
+
     res.json({
       success: true,
-      message: "Successfully subscribed to daily assignment reminders! 🎉",
+      message:
+        "Successfully subscribed to daily assignment reminders! 🎉 Check your phone for a welcome message.",
       data: {
         subscriptionId: subscription.id,
         phoneNumber: subscription.phoneNumber,

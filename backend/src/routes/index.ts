@@ -170,15 +170,15 @@ router.post("/sms/webhook", async (req, res, next) => {
     // Generate AI response to their question
     try {
       const aiResponse = await AIService.generateResponse({
-        message: `You are a helpful study assistant. Answer this question briefly (under 160 characters): ${webhookData.text}`,
-        maxTokens: 50,
+        message: `You are StudyBuddy, a helpful study assistant. Answer this study question concisely and helpfully in under 160 characters. Be encouraging and supportive. Question: ${webhookData.text}`,
+        maxTokens: 60,
         temperature: 0.7,
       });
 
       // Send AI response back via SMS
       await SmsService.sendSms({
         phone: webhookData.fromNumber,
-        message: `StudyBuddy: ${aiResponse.response}`,
+        message: `📚 StudyBuddy: ${aiResponse.response}`,
         replyWebhookUrl: process.env.SMS_WEBHOOK_URL,
       });
 
@@ -192,7 +192,7 @@ router.post("/sms/webhook", async (req, res, next) => {
       await SmsService.sendSms({
         phone: webhookData.fromNumber,
         message:
-          "Sorry, I couldn't process your question right now. Please try again later!",
+          "Sorry, I couldn't process your question right now. Please try again later! 📚",
       });
     }
 
@@ -203,6 +203,52 @@ router.post("/sms/webhook", async (req, res, next) => {
       status: 500,
       message:
         error instanceof Error ? error.message : "Failed to process webhook",
+    });
+  }
+});
+
+// Enable chat for existing subscribers
+router.post("/sms/enable-chat", async (req, res, next) => {
+  try {
+    const schema = z.object({
+      phone: z.string().min(10, "Phone number is required"),
+    });
+
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) {
+      return next({
+        status: 400,
+        message: "Invalid request body",
+        details: parsed.error.format(),
+      });
+    }
+
+    const webhookUrl = process.env.SMS_WEBHOOK_URL;
+    if (!webhookUrl) {
+      return next({
+        status: 500,
+        message: "SMS webhook not configured",
+      });
+    }
+
+    // Send welcome chat message
+    const result = await SmsService.sendSms({
+      phone: parsed.data.phone,
+      message:
+        "🎓 StudyBuddy Chat Enabled! Reply with any study question and I'll answer with AI! Try asking me something now.",
+      replyWebhookUrl: webhookUrl,
+    });
+
+    res.json({
+      success: true,
+      message: "Chat functionality enabled! Check your phone.",
+      smsResult: result,
+    });
+  } catch (error) {
+    console.error("Enable Chat Error:", error);
+    next({
+      status: 500,
+      message: error instanceof Error ? error.message : "Failed to enable chat",
     });
   }
 });
