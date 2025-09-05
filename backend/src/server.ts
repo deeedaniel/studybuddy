@@ -5,6 +5,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import routes from "./routes/index";
 import { notFound, errorHandler } from "./middleware/error";
+import CronJobService from "./services/cronJobs";
 
 const app = express();
 
@@ -33,4 +34,7 @@ app.use(errorHandler);
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, () => {
   console.log(`API listening on http://localhost:${PORT}`);
+
+  // Start the cron jobs when server starts
+  CronJobService.startDailyReminderJob();
 });
