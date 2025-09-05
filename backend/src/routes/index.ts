@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import canvasRoutes from "./canvas";
 
 const router = Router();
+
+router.use("/canvas", canvasRoutes);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true, uptime: process.uptime() });
