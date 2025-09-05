@@ -1,9 +1,19 @@
 import { useState } from "react";
+import "./App.css";
+import { GoogleLogin } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
+
+interface User {
+  name: string;
+  picture: string;
+  // Add other properties you might need from the JWT
+}
 
 export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   const handleSubmit = async () => {
     if (!apiKey.trim() || !phoneNumber.trim()) {
@@ -50,59 +60,97 @@ export default function App() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
       <div className="max-w-md w-full rounded-2xl border border-gray-200 shadow p-8 bg-white">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-700">
-          StudyBuddy
-        </h1>
-        <p className="mt-2 text-gray-400">
-          Get friendly SMS reminders about your upcoming Canvas assignments.
-        </p>
-
-        <div className="mt-6 space-y-4">
+        {user ? (
           <div>
-            <label
-              htmlFor="apiKey"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Canvas API Key
-            </label>
-            <input
-              type="text"
-              id="apiKey"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter your API key"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="phoneNumber"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Phone Number
-            </label>
-            <input
-              type="text"
-              id="phoneNumber"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter your phone number"
-            />
-          </div>
-        </div>
+            <div className="flex items-center space-x-4">
+              <img
+                className="w-12 h-12 rounded-full"
+                src={user.picture}
+                alt="user"
+              />
+              <div>
+                <h2 className="text-xl font-semibold">{user.name}</h2>
+                <button
+                  onClick={() => setUser(null)}
+                  className="text-sm text-indigo-600 hover:underline"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
 
-        <button
-          className={`mt-6 w-full inline-flex items-center justify-center rounded-lg px-4 py-2 text-white font-medium transition ${
-            isLoading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-500 active:scale-95"
-          }`}
-          onClick={handleSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? "Sending Reminder..." : "Send Assignment Reminder"}
-        </button>
+            <div className="mt-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="apiKey"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Canvas API Key
+                </label>
+                <input
+                  type="text"
+                  id="apiKey"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="Enter your API key"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="phoneNumber"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  id="phoneNumber"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="Enter your phone number"
+                />
+              </div>
+            </div>
+
+            <button
+              className={`mt-6 w-full inline-flex items-center justify-center rounded-lg px-4 py-2 text-white font-medium transition ${
+                isLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-500 active:scale-95"
+              }`}
+              onClick={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending Reminder..." : "Send Assignment Reminder"}
+            </button>
+          </div>
+        ) : (
+          <div className="text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-700">
+              StudyBuddy
+            </h1>
+            <p className="mt-2 text-gray-400">
+              Get friendly SMS reminders about your upcoming Canvas assignments.
+            </p>
+            <div className="mt-6">
+              <GoogleLogin
+                onSuccess={(credentialResponse) => {
+                  if (credentialResponse.credential) {
+                    const credentialResponseDecoded: User = jwtDecode(
+                      credentialResponse.credential
+                    );
+                    setUser(credentialResponseDecoded);
+                  }
+                }}
+                onError={() => {
+                  console.log("Login Failed");
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
