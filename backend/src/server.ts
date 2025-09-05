@@ -9,9 +9,13 @@ import { notFound, errorHandler } from "./middleware/error";
 const app = express();
 
 app.use(helmet());
+// Allow all origins for hackathon - simplified CORS config
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
+    origin: "*", // Allow all origins
+    credentials: false, // Set to false when using wildcard origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 app.use(express.json());

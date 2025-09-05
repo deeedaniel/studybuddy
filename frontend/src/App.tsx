@@ -3,25 +3,47 @@ import { useState } from "react";
 export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!apiKey.trim() || !phoneNumber.trim()) {
+      alert("Please enter both Canvas API key and phone number.");
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const response = await fetch(
-        "http://localhost:4000/api/v1/canvas/courses",
+        "http://localhost:4000/api/v1/canvas/send-assignment-reminder",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ apiKey, phoneNumber }),
+          body: JSON.stringify({
+            apiKey: apiKey.trim(),
+            phoneNumber: phoneNumber.trim(),
+          }),
         }
       );
+
       const data = await response.json();
       console.log("Response from backend:", data);
-      alert("Courses fetched! Check the console.");
+
+      if (response.ok && data.success) {
+        alert(
+          `Success! Assignment reminder sent to ${phoneNumber}. Found ${data.data.assignmentsFound} upcoming assignments.`
+        );
+      } else {
+        alert(`Error: ${data.message || "Failed to send assignment reminder"}`);
+      }
     } catch (error) {
       console.error("Error sending data to backend:", error);
-      alert("Failed to fetch courses. See console for details.");
+      alert(
+        "Failed to send assignment reminder. Please check your internet connection and try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -32,7 +54,7 @@ export default function App() {
           StudyBuddy
         </h1>
         <p className="mt-2 text-gray-400">
-          Enter your Canvas API key and phone number.
+          Get friendly SMS reminders about your upcoming Canvas assignments.
         </p>
 
         <div className="mt-6 space-y-4">
@@ -71,10 +93,15 @@ export default function App() {
         </div>
 
         <button
-          className="mt-6 w-full inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-white font-medium hover:bg-indigo-500 active:scale-95 transition"
+          className={`mt-6 w-full inline-flex items-center justify-center rounded-lg px-4 py-2 text-white font-medium transition ${
+            isLoading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-500 active:scale-95"
+          }`}
           onClick={handleSubmit}
+          disabled={isLoading}
         >
-          Send
+          {isLoading ? "Sending Reminder..." : "Send Assignment Reminder"}
         </button>
       </div>
     </main>
