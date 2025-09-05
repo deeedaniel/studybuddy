@@ -98,24 +98,42 @@ router.post("/sms/send", async (req, res, next) => {
 // SMS Webhook endpoint (for receiving replies)
 router.post("/sms/webhook", async (req, res, next) => {
   try {
+    console.log('=== SMS WEBHOOK RECEIVED ===');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('Raw Body:', JSON.stringify(req.body, null, 2));
+    
     const signature = req.headers['x-textbelt-signature'] as string;
     const timestamp = req.headers['x-textbelt-timestamp'] as string;
     const payload = JSON.stringify(req.body);
     const apiKey = process.env.TEXTBELT_API_KEY || 'textbelt';
 
+    console.log('Signature:', signature);
+    console.log('Timestamp:', timestamp);
+    console.log('API Key exists:', !!apiKey);
+
     // Verify webhook signature
     if (signature && timestamp) {
       const isValid = SmsService.verifyWebhook(apiKey, timestamp, signature, payload);
+      console.log('Signature validation result:', isValid);
+      
       if (!isValid) {
+        console.log('❌ Invalid webhook signature');
         return next({ status: 401, message: "Invalid webhook signature" });
       }
 
       // Check timestamp (not more than 15 minutes old)
       const timestampSeconds = parseInt(timestamp);
       const now = Math.floor(Date.now() / 1000);
-      if (now - timestampSeconds > 900) { // 15 minutes
+      const timeDiff = now - timestampSeconds;
+      console.log('Timestamp difference (seconds):', timeDiff);
+      
+      if (timeDiff > 900) { // 15 minutes
+        console.log('❌ Webhook timestamp too old');
         return next({ status: 401, message: "Webhook timestamp too old" });
       }
+    } else {
+      console.log('⚠️ No signature or timestamp provided - proceeding without verification');
     }
 
     // Process the webhook payload
@@ -171,6 +189,29 @@ router.post("/sms/webhook", async (req, res, next) => {
       message: error instanceof Error ? error.message : "Failed to process webhook" 
     });
   }
+});
+
+// SMS Webhook Test endpoint (GET)
+router.get("/sms/webhook", (req, res) => {
+  console.log('=== SMS WEBHOOK TEST (GET) ===');
+  res.json({ 
+    message: "SMS webhook endpoint is reachable",
+    timestamp: new Date().toISOString(),
+    url: req.originalUrl
+  });
+});
+
+// SMS Configuration Check endpoint
+router.get("/sms/config", (req, res) => {
+  res.json({
+    textbeltConfigured: SmsService.validateConfiguration(),
+    webhookUrl: process.env.SMS_WEBHOOK_URL || 'Not configured',
+    environment: {
+      TEXTBELT_API_KEY: !!process.env.TEXTBELT_API_KEY,
+      SMS_WEBHOOK_URL: !!process.env.SMS_WEBHOOK_URL,
+      SMS_SENDER_NAME: process.env.SMS_SENDER_NAME || 'Not set'
+    }
+  });
 });
 
 // SMS Test endpoint
