@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { AIService, AIGenerateRequest } from "../services/ai";
 import { SmsService, SendSmsRequest, SmsWebhookPayload } from "../services/sms";
+import { CanvasService } from "../services/canvas";
+import SubscriptionService from "../services/subscription";
 import canvasRoutes from "./canvas";
 
 const router = Router();
@@ -169,16 +171,48 @@ router.post("/sms/webhook", async (req, res, next) => {
 
     // Generate AI response to their question
     try {
+      // Look up user subscription to get Canvas context
+      const subscription = SubscriptionService.getSubscription(webhookData.fromNumber);
+      let assignmentContext = "No assignment information available.";
+      let userName = "";
+
+      if (subscription && subscription.isActive) {
+        try {
+          // Fetch their upcoming assignments from Canvas
+          const canvasData = await CanvasService.getUpcomingAssignments(
+            subscription.apiKey,
+            subscription.canvasUrl,
+            subscription.daysAhead || 7
+          );
+          
+          if (canvasData.assignments.length > 0) {
+            assignmentContext = CanvasService.formatAssignmentsForAI(canvasData.assignments);
+          } else {
+            assignmentContext = "You have no upcoming assignments in the next 7 days. Great job staying on top of your work!";
+          }
+        } catch (canvasError) {
+          console.warn("Failed to fetch Canvas assignments:", canvasError);
+          assignmentContext = "Unable to fetch your current assignments, but I'm here to help with your studies!";
+        }
+      }
+
       const aiResponse = await AIService.generateResponse({
-        message: `You are StudyBuddy, a helpful study assistant. Answer this study question concisely and helpfully in under 160 characters. Be encouraging and supportive. Question: ${webhookData.text}`,
-        maxTokens: 60,
+        message: `You are a young college-aged friendly study buddy helping a college student${userName ? ` named ${userName}` : ""}. Answer their question while being encouraging and supportive. Use gen-z slang and write in all lower case. Keep it brief for SMS (under 160 characters). 
+
+Current assignments context:
+${assignmentContext}
+
+Student's question: ${webhookData.text}
+
+Write a helpful, friendly response:`,
+        maxTokens: 80,
         temperature: 0.7,
       });
 
       // Send AI response back via SMS
       await SmsService.sendSms({
         phone: webhookData.fromNumber,
-        message: `📚 StudyBuddy: ${aiResponse.response}`,
+        message: `${aiResponse.response}`,
         replyWebhookUrl: process.env.SMS_WEBHOOK_URL,
       });
 
